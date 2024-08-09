@@ -1,0 +1,59 @@
+pipeline {
+    agent any
+    
+
+    parameters {
+        choice(name: 'BRANCH_NAME', choices: ['master', 'develop', 'feature'], description: 'Choose the branch to deploy')
+    }
+
+    environment {
+        REMOTE_HOST = '192.168.29.130'
+        REMOTE_USER = 'root'
+        //REMOTE_KEY = 'your-private-key-credential-id'
+        REMOTE_PATH = '/root/home/node'
+        GIT_CREDENTIALS_ID = '0ce9cbdc-1c6e-4cb1-866b-bbec3ffb6db3'
+    }
+
+    stages {
+        stage('Checkout') {
+            steps {
+                script {
+                    // Checkout the specified branch using Git credentials
+                    checkout([$class: 'GitSCM', branches: [[name: "${params.BRANCH_NAME}"]],
+                              userRemoteConfigs: [[url: 'https://gitlab.com/dsp9391/node_project.git', credentialsId: "${env.GIT_CREDENTIALS_ID}"]]])
+                }
+            }
+        }
+        
+        stage('build docker images') {
+            steps {
+                // Build the project using Maven
+                sh 'docker build -t my-node-image:latest .'
+            }
+        }
+
+        stage('deployment') {
+            steps {
+                script {
+                    // Copy files to the remote Apache server
+                        sh """
+                        docker tag my-node-image:latest dsp9391/dockerhub:mynodeimage1
+                        docker push dsp9391/dockerhub:mynodeimage1
+                        ssh root@192.168.29.130 'docker pull dsp9391/dockerhub:mynodeimage1'
+                        ssh root@192.168.29.130 'docker run -d --name my-node-container -p 4000:3000 dsp9391/dockerhub:mynodeimage1'
+                        
+
+                        """
+                    
+                }
+            }
+        }
+    }
+
+    post {
+        always {
+            echo 'Deployment completed.'
+        }
+    }
+}
+

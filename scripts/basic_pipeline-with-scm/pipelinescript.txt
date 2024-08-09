@@ -1,0 +1,46 @@
+pipeline {
+    agent any
+
+    parameters {
+        choice(name: 'BRANCH_NAME', choices: ['main', 'develop', 'feature'], description: 'Choose the branch to deploy')
+    }
+
+    environment {
+        REMOTE_HOST = '192.168.73.146'
+        REMOTE_USER = 'root'
+        //REMOTE_KEY = 'your-private-key-credential-id'
+        REMOTE_PATH = '/var/www/html'
+        GIT_CREDENTIALS_ID = '369eff06-5c27-4e0b-8116-597a3d04a3af'
+    }
+
+    stages {
+        stage('Checkout') {
+            steps {
+                script {
+                    // Checkout the specified branch using Git credentials
+                    checkout([$class: 'GitSCM', branches: [[name: "${params.BRANCH_NAME}"]],
+                              userRemoteConfigs: [[url: 'https://gitlab.com/naveen51/neogym.git', credentialsId: "${env.GIT_CREDENTIALS_ID}"]], extensions: [[$class: 'RelativeTargetDirectory', relativeTargetDir: "source-code"]]])
+                }
+            }
+        }
+
+        stage('Deploy to Apache') {
+            steps {
+                script {
+                    // Copy files to the remote Apache server
+                        sh """
+                        rsync -avz -e "ssh" --exclude 'Jenkinsfile' --exclude 'ansible' --delete ${WORKSPACE}/ ${env.REMOTE_USER}@${env.REMOTE_HOST}:${env.REMOTE_PATH}
+                        """
+                    
+                }
+            }
+        }
+    }
+
+    post {
+        always {
+            echo 'Deployment completed.'
+        }
+    }
+}
+

@@ -1,0 +1,128 @@
+pipeline { 
+    agent any 
+    parameters { 
+        choice(name: 'BRANCH_NAME', choices: ['main', 'master'], description: 'Choose the branch to deploy') 
+    } 
+    environment { 
+        REMOTE_HOST = '18.204.205.231' 
+        REMOTE_USER = 'ubuntu' 
+        REMOTE_KEY = '/var/lib/jenkins/.ssh/aws' 
+        REMOTE_PATH = '/home/ubuntu/project' 
+        DEPLOY_PATH = '/var/www/html' 
+        GIT_CREDENTIALS_ID = '0ce9cbdc-1c6e-4cb1-866b-bbec3ffb6db3' 
+       
+    } 
+    stages {
+        stage('Checkout') { 
+
+            steps { 
+
+                script { 
+
+                    // Checkout the specified branch using Git credentials 
+
+                    checkout([$class: 'GitSCM', branches: [[name: "${params.BRANCH_NAME}"]], 
+
+                              userRemoteConfigs: [[url: 'https://gitlab.com/dsp9391/oxer1-html.git', credentialsId: "${env.GIT_CREDENTIALS_ID}"]]]) 
+
+                } 
+
+            } 
+
+        } 
+
+        stage('install docker on aws instance') { 
+
+            steps { 
+
+                script { 
+
+                    // install docker on remote aws machine 
+
+                        sh """ 
+
+                        ansible-playbook -i ansible/hosts --private-key /var/lib/jenkins/.ssh/aws -u ubuntu ansible/install_docker.yml						 
+
+                        """ 
+
+                         
+
+                } 
+
+            } 
+
+        } 
+
+          stage('Deploy to Apache') { 
+
+            steps { 
+
+                script { 
+
+                    // Copy files to the remote Apache server 
+
+                        sh """ 
+
+                        rsync -avz -e 'ssh -i ${REMOTE_KEY}'  --delete ${WORKSPACE}/ ${env.REMOTE_USER}@${env.REMOTE_HOST}:${env.REMOTE_PATH} 
+
+                        """ 
+
+                     
+
+                } 
+
+            } 
+
+        } 
+
+        stage("To pull the image"){ 
+
+            steps{ 
+
+                script{ 
+
+                    sh """ 
+
+                    ssh -i ${REMOTE_KEY} ${REMOTE_USER}@${REMOTE_HOST} "sudo docker pull httpd:latest" 
+
+                    """ 
+
+                } 
+
+            } 
+
+        } 
+
+        stage("image run the container"){ 
+
+            steps{ 
+
+                script{ 
+
+                    sh""" 
+
+                    ssh  -i  ${REMOTE_KEY} ${REMOTE_USER}@${REMOTE_HOST} "sudo docker run -d --name my_container2 -p 8080:80 -v /home/ubuntu/project:/usr/local/apache2/htdocs  httpd:latest" 
+
+                    """ 
+
+                } 
+
+            } 
+
+        } 
+
+  
+
+        
+
+  
+
+        
+
+           
+
+  
+
+    } 
+
+} 

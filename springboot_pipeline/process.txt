@@ -1,0 +1,36 @@
+Clone the Project
+
+Push that project to gitlab Repository
+
+Launch an Instance
+
+Connect through putty
+
+login as ubuntu 
+
+copy the public key from local to remote
+
+ssh -i <privae_key> root@<remote IP Address>
+
+create a pipeline script
+
+git checkout
+
+maven
+
+install maven
+
+install docker
+
+mvn clean package
+
+change permission 
+
+chmod 666 /var/run/docker.sock
+
+build an image
+
+run in container
+
+push to docker hub
+

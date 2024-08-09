@@ -1,0 +1,36 @@
+pipeline { 
+    agent any 
+    parameters { 
+        choice(name: 'BRANCH_NAME', choices: ['main', 'master'], description: 'Choose the branch to deploy') 
+    } 
+    environment { 
+        REMOTE_HOST = '52.3.250.52' 
+        REMOTE_USER = 'ubuntu' 
+        REMOTE_KEY = '/var/lib/jenkins/.ssh/node' 
+        REMOTE_PATH = '/home/ubuntu' 
+        GIT_CREDENTIALS_ID = '0ce9cbdc-1c6e-4cb1-866b-bbec3ffb6db3' 
+    } 
+    stages { 
+        stage('Checkout') { 
+            steps { 
+                script { 
+                    // Checkout the specified branch using Git credentials 
+                    checkout([$class: 'GitSCM', branches: [[name: "${params.BRANCH_NAME}"]], 
+                              userRemoteConfigs: [[url: 'https://gitlab.com/dsp9391/mysql.git', credentialsId: "${env.GIT_CREDENTIALS_ID}"]]]) 
+                } 
+            } 
+        } 
+        stage('install docker on aws instance') { 
+            steps { 
+                script { 
+                    // install docker on remote aws machine 
+                        sh """ 
+                        ansible-playbook -i hosts --private-key /var/lib/jenkins/.ssh/node -u ubuntu playbook.yml						 
+                        """ 
+                         
+                } 
+            } 
+        } 
+
+}
+}

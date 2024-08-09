@@ -1,0 +1,66 @@
+------------------------------pipeline with condiftion on stages------------------
+
+
+
+pipeline {
+    agent any
+
+    parameters {
+        choice(name: 'DEPLOY_ENV', choices: ['development', 'staging', 'production'], description: 'Choose the deployment environment')
+    }
+
+    stages {
+        stage('Build') {
+            steps {
+                echo 'Building...'
+                // Add your build steps here
+            }
+        }
+
+        stage('Test') {
+            steps {
+                echo 'Testing...'
+                // Add your test steps here
+            }
+        }
+
+        stage('Deploy to Development') {
+            when {
+                expression { return params.DEPLOY_ENV == 'development' }
+            }
+            steps {
+                echo 'Deploying to development environment...'
+                // Add your development deployment steps here
+            }
+        }
+
+        stage('Deploy to Staging') {
+            when {
+                expression { return params.DEPLOY_ENV == 'staging' }
+            }
+            steps {
+                echo 'Deploying to staging environment...'
+                // Add your staging deployment steps here
+            }
+        }
+
+        stage('Deploy to Production') {
+            when {
+                expression { return params.DEPLOY_ENV == 'production' }
+            }
+            steps {
+                echo 'Deploying to production environment...'
+                // Add your production deployment steps here
+            }
+        }
+    }
+
+    post {
+        always {
+            echo 'This will always run after all stages complete'
+            // Add any cleanup or notification steps here
+        }
+    }
+}
+
+
